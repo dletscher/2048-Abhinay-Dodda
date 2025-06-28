@@ -61,21 +61,24 @@ class Player(BasePlayer):
     def heuristic(self, state):
         board = [state.getTile(r, c) for r in range(4) for c in range(4)]
         values = [0 if v == 0 else 2 ** v for v in board]
-        empty = values.count(0)
-        empty_score = 270 * empty
+        score = state.getScore()
+        empty_tiles = values.count(0)
+        empty_bonus = 250 * empty_tiles
         max_tile = max(values)
         max_index = values.index(max_tile)
-        corner_bonus = max_tile if max_index in [0, 3, 12, 15] else 0
-        corner_score = 1000 * corner_bonus
+        corner_bonus = 1000 * max_tile if max_index in [0, 3, 12, 15] else -500 * max_tile
         mono_score = 0
         for i in range(4):
             row = [values[4 * i + j] for j in range(4)]
             col = [values[i + 4 * j] for j in range(4)]
-            mono_score += sum(row[j] >= row[j + 1] for j in range(3))
-            mono_score += sum(col[j] >= col[j + 1] for j in range(3))
-        mono_score *= 10
+            for lst in [row, col]:
+                for j in range(3):
+                    if lst[j] >= lst[j + 1]:
+                        mono_score += 10
+                    else:
+                        mono_score -= 10
 
-        return state.getScore() + corner_score + empty_score + mono_score
+        return score + empty_bonus + corner_bonus + mono_score
 
     def moveOrder(self, state):
         actions = state.actions()
