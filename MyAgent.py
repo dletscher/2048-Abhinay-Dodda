@@ -42,7 +42,7 @@ class Player(BasePlayer):
         if state.gameOver():
             return state.getScore()
         if depth == 0:
-            return self.heuristic(state)
+            return self.heuristicBestRotation(state)
         self._parentCount += 1
         best = -float('inf')
         for a in self.moveOrder(state):
@@ -58,37 +58,48 @@ class Player(BasePlayer):
                 break
         return best
 
-    def heuristic(self, state):
+    def heuristicBestRotation(self, state):
+        # Try all 4 rotations and return the best heuristic score
+        best = -float('inf')
+        for r in range(4):
+            rotated = state.rotate(r)
+            best = max(best, self.evaluate(rotated))
+        return best
+
+    def evaluate(self, state):
         board = [state.getTile(r, c) for r in range(4) for c in range(4)]
         values = [0 if v == 0 else 2 ** v for v in board]
 
+        # Score from environment
         score = state.getScore()
+
+        # Empty tile bonus
         empty_tiles = values.count(0)
         empty_bonus = 270 * empty_tiles
 
+        # Max tile corner bonus
         max_tile = max(values)
         max_index = values.index(max_tile)
-        corner_bonus = 1000 * max_tile if max_index in [0, 3, 12, 15] else 0
+        corner_bonus = 1000 * max_tile if max_index in [0, 3, 12, 15] else -500 * max_tile
 
+        # Monotonicity score
         mono_score = 0
         for i in range(4):
             row = [values[4 * i + j] for j in range(4)]
             col = [values[i + 4 * j] for j in range(4)]
-            mono_score += sum(row[j] >= row[j + 1] for j in range(3))
-            mono_score += sum(col[j] >= col[j + 1] for j in range(3))
-        mono_score *= 10
+            for lst in [row, col]:
+                for j in range(3):
+                    if lst[j] >= lst[j + 1]:
+                        mono_score += 10
+                    else:
+                        mono_score -= 10
 
         return score + empty_bonus + corner_bonus + mono_score
 
     def moveOrder(self, state):
         actions = state.actions()
-        action_scores = []
-        for a in actions:
-            result, _ = state.result(a)
-            h = self.heuristic(result)
-            action_scores.append((h, a))
-        action_scores.sort(reverse=True)
-        return [a for _, a in action_scores]
+        preferred = ['UP', 'LEFT', 'RIGHT', 'DOWN']
+        return sorted(actions, key=lambda x: preferred.index(x) if x in preferred else 99)
 
     def stats(self):
         print(f'Average depth: {self._depthCount/self._count:.2f}')
