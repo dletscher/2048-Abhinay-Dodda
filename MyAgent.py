@@ -2,17 +2,18 @@ from Game2048 import *
 import math
 import random
 
-
-##MyAgent
-
 class Player(BasePlayer):
     def __init__(self, timeLimit):
         super().__init__(timeLimit)
         self._lastBestMove = None
 
     def findMove(self, state):
+        legal_moves = list(state.actions())
+        fallback_move = legal_moves[0] if legal_moves else 'L'
+        self.setMove(fallback_move)  # Early fallback to avoid timeouts
+
         free_tiles = state._board.count(0)
-        depth = 4 if free_tiles > 5 else 3
+        depth = 3 if free_tiles < 5 else 4
         best_score = -float('inf')
         best_move = None
 
@@ -28,12 +29,10 @@ class Player(BasePlayer):
             if val > best_score:
                 best_score = val
                 best_move = move
+                self.setMove(best_move)  # Update best so far ASAP
 
         if best_move:
-            self.setMove(best_move)
             self._lastBestMove = best_move
-        elif self._lastBestMove:
-            self.setMove(self._lastBestMove)
 
     def expectimax(self, state, depth, isPlayer):
         if not self.timeRemaining():
@@ -120,4 +119,6 @@ class Player(BasePlayer):
         return sorted(actions, key=lambda m: preferred.index(m) if m in preferred else 99)
 
     def stats(self):
-        print("Heuristic agent running. No depth tracking implemented.")
+        if self.move_count:
+            avg_depth = self.depth_sum / self.move_count
+            print(f"Avg Depth: {avg_depth:.2f}")
