@@ -2,6 +2,9 @@ from Game2048 import *
 import math
 import random
 
+
+##MyAgent
+
 class Player(BasePlayer):
     def __init__(self, timeLimit):
         super().__init__(timeLimit)
